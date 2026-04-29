@@ -1003,7 +1003,8 @@ function buildCharts() {
     data: { labels: [], datasets: [] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: {
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { intersect: false, callbacks: {
         title: arr => arr[0].label,
         label: ctx => ` ${ctx.dataset.label}: ${fmtAmount(ctx.parsed.y)}`
       }}},
@@ -1023,7 +1024,8 @@ function buildCharts() {
     data: { labels: [], datasets: [] },
     options: {
       indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: {
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { intersect: false, callbacks: {
         title: ctx => ctx[0].label,
         label: ctx => ` ${ctx.label}: ${fmtAmount(ctx.parsed.x)}`
       }}},
@@ -1051,7 +1053,8 @@ function buildCharts() {
     data: { labels: [], datasets: [] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: {
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: { intersect: false, callbacks: {
         title: ctx => ctx[0].label,
         label: ctx => ` ${ctx.label}: ${fmtAmount(ctx.parsed.y)}`
       }}},
