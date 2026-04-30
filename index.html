@@ -945,6 +945,7 @@ function updateMainChart(weekly) {
 function updateCompanyChart(weekly) {
   const totals = {};
   weekly.forEach(r => { totals[r.Company] = (totals[r.Company] || 0) + r.amount; });
+  // Sort descending - Chart.js horizontal bars render index 0 at top
   const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 10);
 
   companyChart.data.labels = sorted.map(([k]) => k.length > 22 ? k.slice(0, 20) + '…' : k);
@@ -1007,7 +1008,9 @@ function buildCharts() {
       plugins: { legend: { display: false }, tooltip: { intersect: false, callbacks: {
         title: arr => arr[0].label,
         label: ctx => ` ${ctx.dataset.label}: ${fmtAmount(ctx.parsed.y)}`
-      }}},
+      },
+      itemSort: (a, b) => b.parsed.y - a.parsed.y
+      }},
       scales: {
         x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 40, font: { size: 12 } } },
         y: { stacked: true, grid: { color: 'rgba(80,95,160,0.4)' }, ticks: { callback: v => fmtAmountShort(v), font: { size: 12 } } }
