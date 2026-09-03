@@ -302,6 +302,13 @@
     margin-bottom: 22px;
   }
 
+  .triple-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 22px;
+    margin-bottom: 22px;
+  }
+
   /* ── VIEW TOGGLE ─────────────────────────────────────────────── */
   .view-toggle {
     display: flex;
@@ -372,6 +379,83 @@
     background: rgba(197,40,76,0.15);
     border-color: rgba(197,40,76,0.5);
     color: #e8829a;
+  }
+
+  /* ── STAT LIST (Company / Bank / Method summaries) ──────────────── */
+  .stat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-item:last-child {
+    border-bottom: none;
+  }
+
+  .stat-item .stat-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--text2);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .stat-item .stat-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .stat-item .stat-right {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .stat-item .stat-value {
+    font-family: var(--mono);
+    font-weight: 500;
+    font-size: 13.5px;
+    color: var(--text);
+  }
+
+  .stat-item .stat-pct {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    min-width: 40px;
+    text-align: right;
+  }
+
+  .stat-list-compact .stat-item {
+    padding: 7px 2px;
+  }
+  .stat-list-compact .stat-name {
+    font-size: 12px;
+  }
+  .stat-list-compact .stat-value {
+    font-size: 12px;
+  }
+  .stat-list-compact .stat-pct {
+    font-size: 10.5px;
+    min-width: 34px;
   }
 
   /* ── MODAL ───────────────────────────────────────────────────── */
@@ -531,6 +615,7 @@
     header, .filters-bar, main { padding-left: 18px; padding-right: 18px; }
     .kpi-row { grid-template-columns: repeat(3, 1fr); }
     .bottom-grid { grid-template-columns: 1fr; }
+    .triple-grid { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -665,45 +750,28 @@
     </div>
   </div>
 
-  <!-- BOTTOM GRID -->
-  <div class="bottom-grid">
+  <!-- COMPANY / BANK / METHOD SUMMARY -->
+  <div class="triple-grid">
     <div class="chart-section">
       <div class="section-header">
         <div class="section-title">Volume by Company</div>
-        <div style="display:flex;gap:10px;align-items:center;">
-          <button class="exclude-btn" id="excl-company" onclick="toggleExclude('company')">Exclude CT US</button>
-          <span class="section-tag">Top 10</span>
-        </div>
+        <button class="exclude-btn" id="excl-company" onclick="toggleExclude('company')">Exclude CT US</button>
       </div>
-      <div class="chart-canvas-wrap" style="height:260px;">
-        <canvas id="companyChart"></canvas>
-      </div>
+      <div id="companyStatList" class="stat-list stat-list-compact"></div>
     </div>
     <div class="chart-section">
       <div class="section-header">
         <div class="section-title">Volume by Bank</div>
-        <div style="display:flex;gap:10px;align-items:center;">
-          <button class="exclude-btn" id="excl-bank" onclick="toggleExclude('bank')">Exclude CT US</button>
-          <span class="section-tag">Distribution</span>
-        </div>
+        <button class="exclude-btn" id="excl-bank" onclick="toggleExclude('bank')">Exclude CT US</button>
       </div>
-      <div class="chart-canvas-wrap" style="height:260px;">
-        <canvas id="bankChart"></canvas>
-      </div>
+      <div id="bankStatList" class="stat-list stat-list-compact"></div>
     </div>
-  </div>
-
-  <!-- METHOD CHART -->
-  <div class="chart-section">
-    <div class="section-header">
-      <div class="section-title">Volume by Payment Method</div>
-      <div style="display:flex;gap:10px;align-items:center;">
+    <div class="chart-section">
+      <div class="section-header">
+        <div class="section-title">Volume by Payment Method</div>
         <button class="exclude-btn" id="excl-method" onclick="toggleExclude('method')">Exclude CT US</button>
-        <span class="section-tag">Breakdown</span>
       </div>
-    </div>
-    <div class="chart-canvas-wrap" style="height:220px;">
-      <canvas id="methodChart"></canvas>
+      <div id="methodStatList" class="stat-list stat-list-compact"></div>
     </div>
   </div>
 
@@ -773,7 +841,7 @@ const FREQ_LOOKUP = {"CertainTeed US|||WIRE|||BNPP": {"Frequency": "Weekly", "Da
 let filterCompany = 'ALL', filterCode = 'ALL', filterMethod = 'ALL', filterBank = 'ALL', filterRuntype = 'ALL', filterMonth = 'ALL';
 let filterMonthRange = null; // array of 'YYYY-MM' keys when a quick range filter (e.g. Last 4 Months) is active
 let chartView = 'week', metricView = 'volume';
-let mainChart, companyChart, bankChart, methodChart;
+let mainChart;
 let excludeCTUS = { main: false, company: false, bank: false, method: false };
 let norunFilterBank = 'ALL', norunFilterMethod = 'ALL', norunFilterMonth = 'ALL', norunExcludeInterco = false;
 
@@ -1281,36 +1349,41 @@ function updateMainChart(weekly) {
   }
 }
 
+function renderStatList(elId, sorted, colorFn) {
+  const el = document.getElementById(elId);
+  const total = sorted.reduce((s, [, v]) => s + v, 0) || 1;
+  if (sorted.length === 0) {
+    el.innerHTML = '<div class="no-data" style="height:60px;">No data for current filters</div>';
+    return;
+  }
+  el.innerHTML = sorted.map(([name, val]) => {
+    const sharePct = ((val / total) * 100).toFixed(1);
+    const color = colorFn(name);
+    return `
+      <div class="stat-item">
+        <div class="stat-name" title="${name}"><span class="stat-dot" style="background:${color};"></span>${name}</div>
+        <div class="stat-right">
+          <span class="stat-value">${fmtAmount(val)}</span>
+          <span class="stat-pct">${sharePct}%</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
 function updateCompanyChart(weekly) {
   const totals = {};
   weekly.forEach(r => { totals[r.Company] = (totals[r.Company] || 0) + r.amount; });
-  // Sort descending - Chart.js horizontal bars render index 0 at top
   const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]).slice(0, 10);
-
-  companyChart.data.labels = sorted.map(([k]) => k.length > 22 ? k.slice(0, 20) + '…' : k);
-  companyChart.data.datasets = [{
-    data: sorted.map(([, v]) => v),
-    backgroundColor: sorted.map(([k]) => companyColor(k, 0.85)),
-    borderColor: sorted.map(([k]) => companyColor(k)),
-    borderWidth: 1,
-    borderRadius: 4,
-  }];
-  companyChart.update('none');
+  renderStatList('companyStatList', sorted, name => companyColor(name));
 }
 
 function updateBankChart(weekly) {
   const totals = {};
   weekly.forEach(r => { totals[r.Bank] = (totals[r.Bank] || 0) + r.amount; });
   const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]);
-
-  bankChart.data.labels = sorted.map(([k]) => k);
-  bankChart.data.datasets = [{
-    data: sorted.map(([, v]) => v),
-    backgroundColor: PALETTE.slice(0, sorted.length).map(c => c + 'dd'),
-    borderColor: '#181c27',
-    borderWidth: 2,
-  }];
-  bankChart.update('none');
+  const bankColors = {};
+  sorted.forEach(([k], i) => { bankColors[k] = PALETTE[i % PALETTE.length]; });
+  renderStatList('bankStatList', sorted, name => bankColors[name]);
 }
 
 function updateMethodChart(weekly) {
@@ -1321,16 +1394,9 @@ function updateMethodChart(weekly) {
     totals[m] = (totals[m] || 0) + r.amount;
   });
   const sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]);
-
-  methodChart.data.labels = sorted.map(([k]) => k);
-  methodChart.data.datasets = [{
-    data: sorted.map(([, v]) => v),
-    backgroundColor: PALETTE.slice(0, sorted.length).map(c => c + 'cc'),
-    borderColor: PALETTE.slice(0, sorted.length),
-    borderWidth: 1,
-    borderRadius: 6,
-  }];
-  methodChart.update('none');
+  const methodColors = {};
+  sorted.forEach(([k], i) => { methodColors[k] = PALETTE[i % PALETTE.length]; });
+  renderStatList('methodStatList', sorted, name => methodColors[name]);
 }
 
 function buildCharts() {
@@ -1381,52 +1447,6 @@ function buildCharts() {
         } else {
           openWeekDrilldown(mainChart._weekKeys[elements[0].index]);
         }
-      }
-    }
-  });
-
-  companyChart = new Chart(document.getElementById('companyChart').getContext('2d'), {
-    type: 'bar',
-    data: { labels: [], datasets: [] },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false }, tooltip: { intersect: false, callbacks: {
-        title: ctx => ctx[0].label,
-        label: ctx => ` ${ctx.label}: ${fmtAmount(ctx.parsed.x)}`
-      }}},
-      scales: {
-        x: { grid: { color: 'rgba(80,95,160,0.4)' }, ticks: { callback: v => fmtAmountShort(v), font: { size: 11 } } },
-        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
-      }
-    }
-  });
-
-  bankChart = new Chart(document.getElementById('bankChart').getContext('2d'), {
-    type: 'doughnut',
-    data: { labels: [], datasets: [] },
-    options: {
-      responsive: true, maintainAspectRatio: false, cutout: '60%',
-      plugins: {
-        legend: { position: 'right', labels: { boxWidth: 10, padding: 14, font: { size: 12 } } },
-        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmtAmount(ctx.parsed)}` } }
-      }
-    }
-  });
-
-  methodChart = new Chart(document.getElementById('methodChart').getContext('2d'), {
-    type: 'bar',
-    data: { labels: [], datasets: [] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false }, tooltip: { intersect: false, callbacks: {
-        title: ctx => ctx[0].label,
-        label: ctx => ` ${ctx.label}: ${fmtAmount(ctx.parsed.y)}`
-      }}},
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 12 } } },
-        y: { grid: { color: 'rgba(80,95,160,0.4)' }, ticks: { callback: v => fmtAmountShort(v), font: { size: 12 } } }
       }
     }
   });
@@ -1485,6 +1505,25 @@ function updateNorunChart() {
     return key === norunFilterMonth;
   });
   if (norunExcludeInterco) rej = rej.filter(r => r['Payment Method'] !== 'INTERCO');
+
+  // Completed counterpart (same filters) to compute a rejection-rate % per pattern
+  let completed = filteredDetail();
+  if (norunFilterBank !== 'ALL') completed = completed.filter(r => r.Bank === norunFilterBank);
+  if (norunFilterMethod !== 'ALL') completed = completed.filter(r => r['Payment Method'] === norunFilterMethod);
+  if (norunFilterMonth !== 'ALL') completed = completed.filter(r => {
+    const d = r['Completed'] || r['Created (EST)'];
+    if (!d) return false;
+    const dt = new Date(d);
+    const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+    return key === norunFilterMonth;
+  });
+  if (norunExcludeInterco) completed = completed.filter(r => r['Payment Method'] !== 'INTERCO');
+  const completedCounts = {};
+  completed.forEach(r => {
+    const key = `${r.Company}|||${r['Payment Method']}|||${r.Bank}`;
+    completedCounts[key] = (completedCounts[key] || 0) + 1;
+  });
+
   const last3Months = getLast3Months();
   const map = {};
   rej.forEach(r => {
@@ -1499,10 +1538,15 @@ function updateNorunChart() {
   });
   const patterns = Object.values(map).map(p => {
     const scheduled = getScheduledFreq(p.Company, p.Method, p.Bank);
+    const key = `${p.Company}|||${p.Method}|||${p.Bank}`;
+    const completedForPattern = completedCounts[key] || 0;
+    const totalForPattern = completedForPattern + p.count;
     return {
       ...p,
       scheduledFreq: scheduled ? scheduled.Frequency : null,
       scheduledDay: scheduled ? scheduled.DayOfWeek : null,
+      rejectRate: totalForPattern > 0 ? (p.count / totalForPattern) * 100 : null,
+      totalForPattern,
     };
   }).sort((a, b) => b.count - a.count);
   const maxCount = patterns.length ? patterns[0].count : 1;
@@ -1517,6 +1561,10 @@ function updateNorunChart() {
         ? `Scheduled ${p.scheduledFreq}${p.scheduledDay ? ' (' + p.scheduledDay + ')' : ''}`
         : `Frequency not on file`;
       const monthlyLabel = last3Months.map(m => `${p.monthCounts[m.key] || 0} in ${m.label}`).join(' · ');
+      const rateLabel = p.rejectRate !== null
+        ? `${p.rejectRate.toFixed(0)}% of ${p.totalForPattern} run${p.totalForPattern !== 1 ? 's' : ''} rejected`
+        : '';
+      const rateColor = p.rejectRate === null ? 'var(--text3)' : p.rejectRate >= 50 ? '#e03060' : p.rejectRate >= 20 ? '#f7b731' : '#5ec9cb';
       return `
       <div onclick="openNorunDrilldown(window._norunPatterns[${i}])" style="display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
         <div style="width:26px;font-family:var(--mono);font-size:12px;color:var(--text3);flex-shrink:0;">#${i + 1}</div>
@@ -1528,6 +1576,7 @@ function updateNorunChart() {
           <div style="height:5px;background:var(--surface2);border-radius:3px;margin-top:6px;overflow:hidden;max-width:340px;">
             <div style="height:100%;width:${pct}%;background:${companyColor(p.Company)};border-radius:3px;"></div>
           </div>
+          ${rateLabel ? `<div style="font-family:var(--mono);font-size:10.5px;color:${rateColor};margin-top:5px;">${rateLabel}</div>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0;min-width:210px;">
           <div style="font-family:var(--mono);font-size:15px;font-weight:500;color:#e03060;">${p.count}×</div>
